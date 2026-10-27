@@ -28,11 +28,14 @@ Render the template when the condition is checked, using the variables supplied 
 Templates remain limited. Rendering errors are now reported at check time and stop the action through the existing condition error handling. A condition with a templated `enabled` value is set up regardless of the eventual template result; literal `enabled: false` retains its existing behavior.
 
 Validation:
-- All 654 tests in `tests/helpers/test_condition.py`, `tests/helpers/test_script.py`, and `tests/components/automation` pass.
+
+- All 788 tests in `tests/helpers/test_condition.py`, `tests/helpers/test_script.py`, `tests/components/automation`, and `tests/components/websocket_api/test_commands.py` pass.
 - The four new automation regression cases fail against the unmodified base and pass with this change.
-- Coverage includes reloads, AND/OR/NOT, legacy and platform conditions, repeated runs of cached if/choose conditions, rendering errors, traces, and child lifecycle.
-- Ruff check/format and serial Pylint pass for all five changed files.
+- Coverage includes reloads, AND/OR/NOT, legacy and platform conditions, repeated runs of cached if/choose conditions, rendering errors, traces, child lifecycle, WebSocket variables, and subscription error delivery without repeated events.
+- Ruff check/format and serial Pylint pass for all six changed files.
 - The full `prek run --all-files` run was attempted but did not pass in this environment. Worker processes encountered socket restrictions; serial mypy encountered an internal psutil PID error. Full setup also encountered a missing `autoconf` dependency while building dtlssocket. These are not reported as passing checks.
+
+- Six unrelated test failures in WattWächter, Spin BLE, LibreSync, and Airzone also reproduce in a clean checkout of the unmodified base `d3a387482754d29ecc1eb8a27bd3d8ad4b0f8de0`. [Reproduction and validation evidence](https://github.com/jslponcev-ui/core/blob/review/condition-enabled-141935/contribution-evidence/condition-enabled-141935/CI_VALIDATION.txt).
 
 ## Type of change
 <!--
@@ -74,7 +77,7 @@ Validation:
   https://contributors.home-assistant.io/start/ai-policy/
 -->
 
-- [ ] I understand the code I am submitting and can explain how it works.
+- [x] I understand the code I am submitting and can explain how it works.
 - [x] The code change is tested and works locally.
 - [x] Local tests pass. **Your PR cannot be merged unless tests pass**
 - [x] There is no commented out code in this PR.
@@ -82,7 +85,7 @@ Validation:
 - [ ] I have followed the [perfect PR recommendations][perfect-pr]
 - [x] The code has been formatted using Ruff (`ruff format homeassistant tests`)
 - [x] Tests have been added to verify that the new code works.
-- [ ] Any generated code has been carefully reviewed for correctness and compliance with project standards.
+- [x] Any generated code has been carefully reviewed for correctness and compliance with project standards.
 
 If user exposed functionality or configuration variables are added/changed:
 

@@ -1,12 +1,12 @@
 # Revisión del arreglo de condiciones enabled (#141935)
 
-Estado: implementación terminada y subida a la rama `work/condition-enabled-141935`; todavía no se ha abierto un PR.
+Estado: [PR #188917 publicado](https://github.com/home-assistant/core/pull/188917). La revisión humana fue confirmada antes de publicarlo. El ajuste de cobertura de WebSocket está subido en el commit `e553e812c9f7955d1a5add52329a3e18652487cc`.
 
 - Problema original: https://github.com/home-assistant/core/issues/141935
 - Código completo del cambio: https://github.com/jslponcev-ui/core/commit/df284cf3303ec8fec22a4081dfb9b14a10be09ef
 - Descripción preparada con la plantilla completa: [PR_DESCRIPTION.md](PR_DESCRIPTION.md)
 - Base de trabajo: `a6e0e3b5ccae2bac32367389c3cd7899b8dc8f64`.
-- Alcance: 2 archivos de producción y 3 de pruebas; 345 líneas añadidas y 18 eliminadas.
+- Alcance: 2 archivos de producción y 4 de pruebas.
 
 ## Qué falla y qué cambia
 
@@ -30,11 +30,11 @@ El mismo punto de entrada cubre condiciones antiguas y de plataforma. Los tests 
 
 ## Comprobaciones realizadas
 
-- Suite: **654 passed in 20.61s**.
-- Comando: `PYTHONPATH=$PWD /tmp/ha-uv/bin/uv run --no-sync python -m pytest -q tests/helpers/test_condition.py tests/helpers/test_script.py tests/components/automation --disable-warnings --tb=short`.
+- Suite: **788 passed in 28.76s**.
+- Comando: `PYTHONPATH=$PWD /tmp/ha-uv/bin/uv run --no-sync python -m pytest -q tests/helpers/test_condition.py tests/helpers/test_script.py tests/components/automation tests/components/websocket_api/test_commands.py --disable-warnings --tb=short`.
 - Prueba de regresión: las cuatro variantes state/and/or/not fallan con los dos archivos de producción originales. Después de restaurar la implementación, las cuatro pasan.
-- Ruff check y Ruff format --check: pasan en los cinco archivos.
-- Pylint en modo serial (`-j 1`): pasa en los cinco archivos.
+- Ruff check y Ruff format --check: pasan en los seis archivos.
+- Pylint en modo serial (`-j 1`): pasa en los seis archivos.
 - `git diff --check`: pasa.
 
 ## Limitaciones de la validación local
@@ -43,9 +43,8 @@ Se ejecutaron `script/setup` y `prek run --all-files`, pero no se logró una eje
 
 El primer intento de prek marcó además yamllint por modificación de archivos durante la ejecución y mypy por un módulo duplicado generado (.py/.pyi). No se afirma que estos checks globales hayan pasado; la rama contiene únicamente los cinco cambios revisados. Los tests específicos y Pylint serial sí terminaron correctamente.
 
-## Revisión humana pendiente
+## Estado de revisión y CI
 
-[AGENTS.md de Home Assistant](https://github.com/home-assistant/core/blob/dev/AGENTS.md) exige:
-> Autonomous contributions are not accepted: a human must review, understand, and be able to explain every change before it is submitted.
+El usuario confirmó la revisión antes de publicar el PR. Los dos fallos de WebSocket de la primera ejecución quedaron cubiertos por el ajuste de pruebas: el error de enabled se comunica al evaluar la condición y como evento en una suscripción. Se comprueba también que la suscripción no repita errores idénticos.
 
-Por ello se mantienen sin marcar las casillas de comprensión del código y de revisión del código generado. La rama y esta descripción están preparadas para que puedas revisar el cambio antes de abrir el PR.
+Los otros seis fallos de CI se reprodujeron en un checkout limpio de la base de Home Assistant, sin los cambios de este PR. Consulta [CI_VALIDATION.txt](CI_VALIDATION.txt) para el comando y los resultados. El nuevo CI debe evaluarse sobre el commit `e553e812c9f7955d1a5add52329a3e18652487cc`.

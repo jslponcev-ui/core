@@ -1,0 +1,148 @@
+CI investigation for home-assistant/core#188917 — 2026-10-27
+
+PR: https://github.com/home-assistant/core/pull/188917
+Original PR head: df284cf3303ec8fec22a4081dfb9b14a10be09ef
+Follow-up head: e553e812c9f7955d1a5add52329a3e18652487cc
+Original failed CI: https://github.com/home-assistant/core/actions/runs/40545052295
+Follow-up CI: https://github.com/home-assistant/core/actions/runs/40549143488
+
+RELATED FAILURES AND FOLLOW-UP
+The original head failed two WebSocket tests that still expected enabled-template errors during condition setup. The change deliberately evaluates enabled at condition-check time with the run variables. The test_condition error includes the ConditionError context, and subscribe_condition reports the evaluation error in its event after accepting the subscription.
+
+The follow-up updates those expectations, preserves config-error checks, verifies that repeated errors are not re-sent, and adds both enabled and disabled cases using supplied WebSocket variables. No production code is changed in the follow-up.
+
+Validation:
+PYTHONPATH=$PWD uv run --no-sync python -m pytest -q tests/components/websocket_api/test_commands.py tests/helpers/test_condition.py tests/helpers/test_script.py tests/components/automation --disable-warnings --tb=short
+788 passed in 28.76s; 2 snapshots passed.
+
+Ruff check and Ruff format --check pass for tests/components/websocket_api/test_commands.py.
+Pylint -j 1 passes for the same file.
+git diff --check passes.
+Full prek was attempted again. Ruff, formatting, codespell, zizmor, JSON, YAML, prettier and generated-file checks passed. Process-based mypy, Pylint and hassfest could not complete due to the environment's Unix-socket restrictions. These global checks are not claimed as passing.
+
+UNRELATED FAILURES REPRODUCED WITHOUT THE PR
+A separate clean checkout at the exact base commit d3a387482754d29ecc1eb8a27bd3d8ad4b0f8de0 reproduces all six other CI failures. git status --short produced no output. The environment was reused; the pytest-home-assistant and pylint-home-assistant Python sources were compared byte-for-byte with this checkout and were identical.
+
+Command from that clean checkout:
+PYTHONPATH=$PWD uv run --no-sync python -m pytest -q tests/components/wattwaechter/test_sensor.py::test_gas_water_entities tests/components/spin_ble/test_switch.py::test_switches tests/components/libresync/test_media_player.py::test_entities 'tests/components/libresync/test_config_flow.py::test_ssdp_known_hub_reloads_when_retrying[retrying]' tests/components/airzone/test_select.py::test_airzone_create_selects --disable-warnings --tb=short
+
+Selected output:
+_________________________ test_gas_water_entities[gas] _________________________
+tests/components/wattwaechter/test_sensor.py:355: in test_gas_water_entities
+    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+../ha-mariadb/packages/pytest-home-assistant/pytest_homeassistant/common.py:1957: in snapshot_platform
+    assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
+E   AssertionError: assert [+ received] == [- snapshot]
+E       EntityRegistryEntrySnapshot({
+E        ...
+E         'config_entry_id': <ANY>,
+E     -   'config_subentry_id': <ANY>,
+E     +   'config_subentry_id': None,
+E         'device_class': None,
+E        ...
+E       })
+---------------------------- Captured stderr setup -----------------------------
+INFO:homeassistant.loader:Loaded homeassistant from homeassistant.components.homeassistant
+------------------------------ Captured log setup ------------------------------
+2026-10-27 18:17:45.744 INFO     SyncWorker_0 homeassistant.loader:loader.py:918 Loaded homeassistant from homeassistant.components.homeassistant
+________________________ test_gas_water_entities[water] ________________________
+tests/components/wattwaechter/test_sensor.py:355: in test_gas_water_entities
+    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+../ha-mariadb/packages/pytest-home-assistant/pytest_homeassistant/common.py:1957: in snapshot_platform
+    assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
+E   AssertionError: assert [+ received] == [- snapshot]
+E       EntityRegistryEntrySnapshot({
+E        ...
+E         'config_entry_id': <ANY>,
+E     -   'config_subentry_id': <ANY>,
+E     +   'config_subentry_id': None,
+E         'device_class': None,
+E        ...
+E       })
+----------------------------- Captured stderr call -----------------------------
+INFO:homeassistant.loader:Loaded wattwaechter from homeassistant.components.wattwaechter
+INFO:homeassistant.setup:Setting up wattwaechter
+INFO:homeassistant.loader:Loaded sensor from homeassistant.components.sensor
+________________________________ test_switches _________________________________
+tests/components/spin_ble/test_switch.py:68: in test_switches
+    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+../ha-mariadb/packages/pytest-home-assistant/pytest_homeassistant/common.py:1957: in snapshot_platform
+    assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
+E   AssertionError: assert [+ received] == [- snapshot]
+E       EntityRegistryEntrySnapshot({
+E        ...
+E         'config_entry_id': <ANY>,
+E     -   'config_subentry_id': <ANY>,
+E     +   'config_subentry_id': None,
+E         'device_class': None,
+E        ...
+E       })
+---------------------------- Captured stderr setup -----------------------------
+INFO:homeassistant.loader:Loaded bluetooth from homeassistant.components.bluetooth
+INFO:homeassistant.loader:Loaded usb from homeassistant.components.usb
+INFO:homeassistant.loader:Loaded websocket_api from homeassistant.components.websocket_api
+________________________________ test_entities _________________________________
+tests/components/libresync/test_media_player.py:65: in test_entities
+    await snapshot_platform(hass, entity_registry, snapshot, mock_config_entry.entry_id)
+../ha-mariadb/packages/pytest-home-assistant/pytest_homeassistant/common.py:1957: in snapshot_platform
+    assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
+E   AssertionError: assert [+ received] == [- snapshot]
+E       EntityRegistryEntrySnapshot({
+E        ...
+E         'config_entry_id': <ANY>,
+E     -   'config_subentry_id': <ANY>,
+E     +   'config_subentry_id': None,
+E         'device_class': None,
+E     -   'device_id': <ANY>,...
+E     
+E     ...Full output truncated (4 lines hidden), use '-vv' to show
+---------------------------- Captured stderr setup -----------------------------
+INFO:homeassistant.loader:Loaded libresync from homeassistant.components.libresync
+INFO:homeassistant.setup:Setting up libresync
+_____________ test_ssdp_known_hub_reloads_when_retrying[retrying] ______________
+tests/components/libresync/test_config_flow.py:213: in test_ssdp_known_hub_reloads_when_retrying
+    assert entry.state is ConfigEntryState.LOADED
+E   AssertionError: assert <ConfigEntryState.SETUP_ERROR: 'setup_error'> is <ConfigEntryState.LOADED: 'loaded'>
+E    +  where <ConfigEntryState.SETUP_ERROR: 'setup_error'> = <ConfigEntry entry_id=01M5Z5WDVMHA44K3AQANGAETSW version=1 domain=libresync title=Mock Title state=ConfigEntryState.SETUP_ERROR unique_id=uuid:1a2b3c4d-5e6f-11f0-9193-0123456789ab>.state
+E    +  and   <ConfigEntryState.LOADED: 'loaded'> = ConfigEntryState.LOADED
+----------------------------- Captured stderr call -----------------------------
+INFO:homeassistant.loader:Loaded libresync from homeassistant.components.libresync
+INFO:homeassistant.setup:Setting up libresync
+WARNING:homeassistant.helpers.frame:Detected that integration 'libresync' returns a boolean from async_setup_entry, which should return None. Please create a bug report at https://github.com/home-assistant/core/issues?q=is%3Aopen+is%3Aissue+label%3A%22integration%3A+libresync%22
+ERROR:homeassistant.config_entries:Error setting up entry Mock Title for libresync
+Traceback (most recent call last):
+  File "/workspace/scratch/fe8f4efcf1eb/ha-condition-baseline/homeassistant/config_entries.py", line 1028, in __async_setup_with_context
+    _async_process_entry_method_result(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        integration.domain, "async_setup_entry", setup_result
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+_________________________ test_airzone_create_selects __________________________
+tests/components/airzone/test_select.py:52: in test_airzone_create_selects
+    await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
+../ha-mariadb/packages/pytest-home-assistant/pytest_homeassistant/common.py:1957: in snapshot_platform
+    assert entity_entry == snapshot(name=f"{entity_entry.entity_id}-entry")
+E   AssertionError: assert [+ received] == [- snapshot]
+E       EntityRegistryEntrySnapshot({
+E        ...
+E         'config_entry_id': <ANY>,
+E     -   'config_subentry_id': <ANY>,
+E     +   'config_subentry_id': None,
+E         'device_class': None,
+E        ...
+E       })
+----------------------------- Captured stderr call -----------------------------
+INFO:homeassistant.loader:Loaded airzone from homeassistant.components.airzone
+INFO:homeassistant.setup:Setting up airzone
+INFO:homeassistant.loader:Loaded select from homeassistant.components.select
+RuntimeError: Detected that integration 'libresync' returns a boolean from async_setup_entry, which should return None. Please create a bug report at https://github.com/home-assistant/core/issues?q=is%3Aopen+is%3Aissue+label%3A%22integration%3A+libresync%22
+RuntimeError: Detected that integration 'libresync' returns a boolean from async_setup_entry, which should return None. Please create a bug report at https://github.com/home-assistant/core/issues?q=is%3Aopen+is%3Aissue+label%3A%22integration%3A+libresync%22
+FAILED tests/components/wattwaechter/test_sensor.py::test_gas_water_entities[gas]
+FAILED tests/components/wattwaechter/test_sensor.py::test_gas_water_entities[water]
+FAILED tests/components/spin_ble/test_switch.py::test_switches - AssertionErr...
+FAILED tests/components/libresync/test_media_player.py::test_entities - Asser...
+FAILED tests/components/libresync/test_config_flow.py::test_ssdp_known_hub_reloads_when_retrying[retrying]
+FAILED tests/components/airzone/test_select.py::test_airzone_create_selects
+6 failed in 1.29s
+
+These six tests were not changed in the condition-template PR.
